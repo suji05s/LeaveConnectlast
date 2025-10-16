@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Request Leave - Leave Portal{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h4 class="mb-0">
+                    <i class="bi bi-plus-circle"></i> Request Leave
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="alert alert-info">
+                            <strong>Sick:</strong> {{ balance.sick_leave }} days
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="alert alert-primary">
+                            <strong>Vacation:</strong> {{ balance.vacation_leave }} days
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="alert alert-secondary">
+                            <strong>Personal:</strong> {{ balance.personal_leave }} days
+                        </div>
+                    </div>
+                </div>
+
+                <form method="POST" action="{{ url_for('request_leave') }}">
+                    <div class="mb-3">
+                        <label for="leave_type" class="form-label">Leave Type</label>
+                        <select class="form-select" id="leave_type" name="leave_type" required>
+                            <option value="">Select leave type...</option>
+                            <option value="sick">Sick Leave</option>
+                            <option value="vacation">Vacation Leave</option>
+                            <option value="personal">Personal Leave</option>
+                        </select>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="start_date" class="form-label">Start Date</label>
+                            <input type="date" class="form-control" id="start_date" name="start_date" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="end_date" class="form-label">End Date</label>
+                            <input type="date" class="form-control" id="end_date" name="end_date" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="reason" class="form-label">Reason</label>
+                        <textarea class="form-control" id="reason" name="reason" rows="4" required placeholder="Please provide a brief reason for your leave request..."></textarea>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-send"></i> Submit Request
+                        </button>
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
