@@ -1,11 +1,8 @@
-from flask import session, render_template, request, redirect, url_for, flash, jsonify
+from flask import render_template, request, redirect, url_for, flash, jsonify, session
 from app import app, db
-from replit_auth import require_login, make_replit_blueprint
-from flask_login import current_user
+from flask_login import current_user, login_required, login_user, logout_user
 from models import LeaveRequest, LeaveBalance, User
 from datetime import datetime
-
-app.register_blueprint(make_replit_blueprint(), url_prefix="/auth")
 
 @app.before_request
 def make_session_permanent():
@@ -17,8 +14,46 @@ def index():
         return redirect(url_for('dashboard'))
     return render_template('landing.html')
 
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+    if request.method == 'POST':
+        email = request.form.get('email')
+        password = request.form.get('password')
+        user = User.query.filter_by(email=email).first()
+        if user:
+            flash('Email address already exists.', 'error')
+            return redirect(url_for('register'))
+        new_user = User(email=email)
+        new_user.set_password(password)
+        db.session.add(new_user)
+        db.session.commit()
+        flash('Registration successful! Please log in.', 'success')
+        return redirect(url_for('login'))
+    return render_template('register.html')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+    if request.method == 'POST':
+        email = request.form.get('email')
+        password = request.form.get('password')
+        user = User.query.filter_by(email=email).first()
+        if user and user.check_password(password):
+            login_user(user, remember=True)
+            return redirect(url_for('dashboard'))
+        flash('Invalid email or password.', 'error')
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    logout_user()
+    return redirect(url_for('index'))
+
 @app.route('/dashboard')
-@require_login
+@login_required
 def dashboard():
     balance = LeaveBalance.query.filter_by(user_id=current_user.id).first()
     if not balance:
@@ -31,7 +66,7 @@ def dashboard():
     return render_template('dashboard.html', user=current_user, balance=balance, leave_requests=leave_requests)
 
 @app.route('/request-leave', methods=['GET', 'POST'])
-@require_login
+@login_required
 def request_leave():
     if request.method == 'POST':
         leave_type = request.form.get('leave_type')
@@ -75,7 +110,7 @@ def request_leave():
     return render_template('request_leave.html', balance=balance)
 
 @app.route('/manager')
-@require_login
+@login_required
 def manager_dashboard():
     if current_user.role != 'manager':
         flash('Access denied. Manager privileges required.', 'error')
@@ -87,7 +122,7 @@ def manager_dashboard():
     return render_template('manager_dashboard.html', pending_requests=pending_requests, all_requests=all_requests)
 
 @app.route('/manager/approve/<int:request_id>', methods=['POST'])
-@require_login
+@login_required
 def approve_leave(request_id):
     if current_user.role != 'manager':
         return jsonify({'error': 'Unauthorized'}), 403
@@ -114,7 +149,7 @@ def approve_leave(request_id):
     return redirect(url_for('manager_dashboard'))
 
 @app.route('/manager/reject/<int:request_id>', methods=['POST'])
-@require_login
+@login_required
 def reject_leave(request_id):
     if current_user.role != 'manager':
         return jsonify({'error': 'Unauthorized'}), 403
@@ -131,13 +166,13 @@ def reject_leave(request_id):
     return redirect(url_for('manager_dashboard'))
 
 @app.route('/calendar')
-@require_login
+@login_required
 def calendar():
     approved_leaves = LeaveRequest.query.filter_by(status='approved').all()
     return render_template('calendar.html', approved_leaves=approved_leaves)
 
 @app.route('/api/calendar-events')
-@require_login
+@login_required
 def calendar_events():
     approved_leaves = LeaveRequest.query.filter_by(status='approved').all()
     events = []
@@ -154,7 +189,7 @@ def calendar_events():
     return jsonify(events)
 
 @app.route('/toggle-role')
-@require_login
+@login_required
 def toggle_role():
     if current_user.role == 'employee':
         current_user.role = 'manager'
@@ -163,3 +198,4 @@ def toggle_role():
     db.session.commit()
     flash(f'Role switched to {current_user.role}', 'success')
     return redirect(url_for('dashboard'))
+

@@ -1,9 +1,13 @@
+from dotenv import load_dotenv
+load_dotenv()
+
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
 import os
 from werkzeug.middleware.proxy_fix import ProxyFix
 import logging
+from flask_login import LoginManager
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -23,7 +27,12 @@ app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
 
 db = SQLAlchemy(app, model_class=Base)
 
-with app.app_context():
-    import models
-    db.create_all()
-    logging.info("Database tables created")
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+
+@login_manager.user_loader
+def load_user(user_id):
+    from models import User
+    return User.query.get(int(user_id))
+
